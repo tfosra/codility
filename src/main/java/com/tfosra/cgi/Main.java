@@ -6,11 +6,9 @@
 package com.tfosra.cgi;
 
 import com.google.zxing.BarcodeFormat;
-import com.google.zxing.BinaryBitmap;
 import com.google.zxing.EncodeHintType;
 import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeReader;
 import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import java.awt.Color;
@@ -18,11 +16,15 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 
 /**
@@ -40,9 +42,9 @@ public class Main {
 //        A[3][0] = 0;    A[3][1] = 2;    A[3][2] =  1;
 //        A[4][0] = 1;    A[4][1] = 6;    A[4][2] =  8;
 //        System.out.println(solution1(A));
-//        String str = "122151121"; // Should give 22
-//        System.out.println(nbSegment(str));
-        qrcode();
+        String str = "122151121"; // Should give 22
+        System.out.println(nbSegment2(str));
+//        qrcode();
     }
 
     public static void qrcode() {
@@ -81,8 +83,10 @@ public class Main {
                 }
             }
             ImageIO.write(image, fileType, myFile);
-        } catch (WriterException | IOException e) {
+        } catch (WriterException e) {
             System.out.println(e);
+        } catch (IOException ex) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
         System.out.println("\n\nYou have successfully created QR Code.");
     }
@@ -133,6 +137,100 @@ public class Main {
 
             // Remove the first and last nodes
             S = S.substring(1, size - 1);
+        }
+        return (int) (hits % 1000000007);
+    }
+    
+    private static class Segment {
+        public int count;
+        public List<Character> remain;
+        public boolean isNew = true;
+        
+        public Segment() {
+            remain = new ArrayList<>();
+        }
+        
+        public Segment fuse(Segment s) {
+            Segment res = new Segment();
+            res.count = count + s.count;
+            res.remain.addAll(remain);
+            res.addColors(s.remain);
+            return res;
+        }
+        
+        public void addColor(char color) {
+            if (isNew) {
+                isNew = false;
+            }
+            if (remain.contains(color)) {
+                remain.remove(Character.valueOf(color));
+            }
+            else {
+                remain.add(color);
+            }
+        }
+        
+        public void addColors(List<Character> colors) {
+            colors.forEach((color) -> {
+                addColor(color);
+            });
+        }
+        
+        public boolean favorable() {
+            return evenFavorable() || oddFavorable();
+        }
+        public boolean evenFavorable() {
+            return remain.isEmpty();
+        }
+        public boolean oddFavorable() {
+            return remain.size() == 1;
+        }
+
+        @Override
+        public String toString() {
+            return count + " - " + remain;
+        }
+        
+    }
+    
+    public static int nbSegment2(String S) {
+        List<Segment> list = new ArrayList<>();
+        long hits = 0;
+
+        for (char color = '0'; color <= '9'; color++) {
+            Segment segment = null;
+            Segment oldSegment = null;
+            for (char c : S.toCharArray()) {
+                if (c == color) {
+                    if (segment != null && !segment.isNew) {
+                        oldSegment = segment;
+                        segment = null;
+                    }
+                    if (segment == null) {
+                        segment = new Segment();
+                        list.add(segment);
+                    }
+                    segment.count++;
+                }
+                else {
+                    if (segment == null)
+                        continue;
+                    if (segment.isNew) {
+                        hits += (segment.count * (segment.count + 1)) / 2;
+                        if (oldSegment != null) {
+                            
+                        }
+                    }
+                    segment.addColor(c);
+                    if (segment.evenFavorable()) 
+                        hits += segment.count;
+                    else
+                        hits += segment.count / 2;
+                }
+            }
+            
+            // Now compute other hits
+            
         }
         return (int) (hits % 1000000007);
     }
